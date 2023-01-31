@@ -1,0 +1,33 @@
+name: Python test
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.7", "3.8", "3.9", "3.10"]
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up PDM
+      uses: pdm-project/setup-pdm@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        pdm sync -d -G testing
+    - name: Run Tests
+      run: |
+        pdm run -v pytest tests
+    - name: Lint with flake8
+      run: |
+        pdm run -v flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        pdm run -v flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
