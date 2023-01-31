@@ -1,0 +1,22 @@
+[tool.pdm]
+
+[project]
+name = "routefinder"
+version = "0.1.0"
+description = "A package for find a shortest air route."
+authors = [
+    {name = "gamecss", email = "52902973+gamecss@users.noreply.github.com"},
+]
+dependencies = [
+    "Dijkstar>=2.6.0",
+    "haversine>=2.7.0",
+    "geolib>=1.0.7",
+    "tqdm>=4.64.1",
+]
+requires-python = ">=3.7"
+readme = "README.md"
+license = {text = "MIT"}
+
+[build-system]
+requires = ["pdm-pep517>=1.0"]
+build-backend = "pdm.pep517.api"
