@@ -161,3 +161,7 @@ cython_debug/
 
 # Pickle dumped data
 *.pickle
+
+# Debug files
+debug.py
+test.py

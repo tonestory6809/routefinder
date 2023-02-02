@@ -18,7 +18,7 @@ readme = "README.md"
 license = {text = "MIT"}
 
 [tool.pdm.dev-dependencies]
-testing = ["pytest", "flake8"]
+testing = ["pytest", "flake8", "requests"]
 
 [build-system]
 requires = ["pdm-pep517>=1.0"]

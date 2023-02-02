@@ -24,9 +24,16 @@ jobs:
     - name: Install dependencies
       run: |
         pdm sync -d -G testing
+    - name: Build package
+      run: |
+        pdm build
+    - uses: actions/upload-artifact@v3
+      with:
+        name: Dist
+        path: 'dist'
     - name: Run Tests
       run: |
-        pdm run -v pytest tests
+        pdm run -v pytest tests -s
     - name: Lint with flake8
       run: |
         pdm run -v flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics

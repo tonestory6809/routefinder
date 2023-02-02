@@ -12,8 +12,9 @@ from typing import Iterable, Literal, Optional, List, Tuple, Dict
 from haversine import haversine, Unit
 from tqdm import tqdm
 from dijkstar import Graph
-from geolib import geohash
 from .libraries import (
+    DataCorruptionError,
+    Geohash,
     AirportInfo,
     AirportProcedure,
     DataNotReadyError,
@@ -28,9 +29,6 @@ from .libraries import (
 
 
 __all__ = ["DataCompiler"]
-
-
-TempNavaidFrequency = Dict[str, float]
 
 
 class DataCompiler:
@@ -56,30 +54,24 @@ class DataCompiler:
     graph: Graph = Graph()
     node_info: Dict[str, HashedNodeInfo] = {}
     airport_info: Dict[str, AirportInfo] = {}
-    _navaid_frequency: TempNavaidFrequency = {}
+    _navaid_frequency: Dict[str, float] = {}
     _navaids_read: bool = False
     _edge_read: bool = False
     _airport_read: bool = False
 
     def __init__(self, asdata_path: str, log: bool) -> None:
-        self.asdata_path = asdata_path
-        self.log = log
-
-    @staticmethod
-    def hash(position: Position) -> str:
-        """Hash position into geohash.
+        """
+        Create a DataCompiler instance.
 
         Parameters
         ----------
-        position : Position
-            Position to hash.
-
-        Returns
-        -------
-        str
-            Geohashed position.
+        asdata_path : str
+            Path of asdata navigraph data.
+        log : bool
+            Print log.
         """
-        return geohash.encode(*position, 9)
+        self.asdata_path = asdata_path
+        self.log = log
 
     @staticmethod
     def get_distance(position1: Position, position2: Position) -> float:
@@ -144,7 +136,7 @@ class DataCompiler:
         else:
             navaids_iter = iter(lines)
         for row in navaids_iter:
-            navaid_hashed_position = self.hash((float(row[6]), float(row[7])))
+            navaid_hashed_position = Geohash.hash((float(row[6]), float(row[7])))
             self._navaid_frequency[navaid_hashed_position] = float(row[2])
         self._navaids_read = True
 
@@ -171,9 +163,9 @@ class DataCompiler:
                 continue
             if row[0] == "S":
                 if edgename is None:
-                    raise SyntaxError("ATS.txt is corrupted.")
+                    raise DataCorruptionError("ATS.txt is corrupted.")
                 start_point_name: str = row[1]
-                start_point_hashed_position: str = self.hash(
+                start_point_hashed_position: str = Geohash.hash(
                     (float(row[2]), float(row[3]))
                 )
                 start_point_frequency: Optional[float] = None
@@ -182,7 +174,7 @@ class DataCompiler:
                         start_point_hashed_position
                     ]
                 end_point_name: str = row[4]
-                end_point_hashed_position: str = self.hash(
+                end_point_hashed_position: str = Geohash.hash(
                     (float(row[5]), float(row[6]))
                 )
                 end_point_frequency: Optional[float] = None
@@ -264,7 +256,7 @@ class DataCompiler:
                         proc_nodes: List[NodeInfo] = []
                         _, proc_name, proc_runway, _ = lines[0].split(",")
                         if ap_icao is None:
-                            raise SyntaxError(f"proc/{filename} is corrupted.")
+                            raise DataCorruptionError(f"proc/{filename} is corrupted.")
                         for row in csv.reader(lines):
                             if (
                                 row[0] == "SID"
@@ -274,7 +266,7 @@ class DataCompiler:
                                 continue
                             node_position: Position = (float(row[2]), float(row[3]))
                             node_frequency: Optional[float] = None
-                            node_hashed_position: str = self.hash(node_position)
+                            node_hashed_position: str = Geohash.hash(node_position)
                             if node_hashed_position in self._navaid_frequency:
                                 node_frequency = self._navaid_frequency[
                                     node_hashed_position
@@ -294,7 +286,7 @@ class DataCompiler:
                                 last_node_name: str = last_node["name"]
                                 last_node_position: Position = last_node["position"]
                                 if last_node_name not in ap_sid:
-                                    last_node_hashed_position = self.hash(
+                                    last_node_hashed_position = Geohash.hash(
                                         last_node_position
                                     )
                                     last_node_frequency = last_node["frequency"]
@@ -306,7 +298,7 @@ class DataCompiler:
                                     ap_sid[last_node_name] = []
                                     self.graph.add_edge(
                                         ap_icao,
-                                        self.hash(last_node_position),
+                                        Geohash.hash(last_node_position),
                                         (
                                             self.get_distance(
                                                 ap_position, last_node_position
@@ -326,7 +318,7 @@ class DataCompiler:
                                 first_node_name: str = first_node["name"]
                                 first_node_position: Position = first_node["position"]
                                 if first_node_name not in ap_star:
-                                    first_node_hashed_position = self.hash(
+                                    first_node_hashed_position = Geohash.hash(
                                         first_node_position
                                     )
                                     first_node_frequency = first_node["frequency"]
@@ -337,7 +329,7 @@ class DataCompiler:
                                         }
                                     ap_star[first_node_name] = []
                                     self.graph.add_edge(
-                                        self.hash(first_node_position),
+                                        Geohash.hash(first_node_position),
                                         ap_icao,
                                         (
                                             self.get_distance(
@@ -356,7 +348,7 @@ class DataCompiler:
 
                         continue
                 if ap_icao is not None:
-                    self.node_info[self.hash(ap_position)] = {
+                    self.node_info[Geohash.hash(ap_position)] = {
                         "name": ap_icao,
                         "frequency": None,
                     }

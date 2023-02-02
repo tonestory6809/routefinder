@@ -2,6 +2,7 @@
 Collection of types and errors.
 """
 from typing import List, Optional, Tuple, Dict, TypedDict, NamedTuple
+from geolib import geohash
 
 # Tuple[Distance, Way]
 Edge = Tuple[float, str]
@@ -22,11 +23,51 @@ __all__ = [
     "InfoData",
     "RouteResult",
     "RouteFinderError",
+    "NodeNotFoundError",
     "NoResultError",
     "DataNotReadyError",
     "ReadOrderError",
     "AlreadyReadError",
+    "DataCorruptionError",
+    "MiscellaneousError",
 ]
+
+
+class Geohash:
+    @staticmethod
+    def hash(position: Position) -> str:
+        """
+        Hash position into geohash.
+
+        Parameters
+        ----------
+        position : Position
+            Position to hash.
+
+        Returns
+        -------
+        str
+            Geohashed position.
+        """
+        return geohash.encode(*position, 9)
+
+    @staticmethod
+    def unhash(hashed_position: str) -> Position:
+        """
+        Unhash geohashed position.
+
+        Parameters
+        ----------
+        hashed_position : str
+            Geohashed position.
+
+        Returns
+        -------
+        Position
+            Position.
+        """
+        lat, lon = geohash.decode(hashed_position)
+        return (round(float(lat), 6), round(float(lon), 6))
 
 
 class HashedNodeInfo(TypedDict):
@@ -151,6 +192,10 @@ class RouteFinderError(Exception):
     """Base error of Routefinder."""
 
 
+class NodeNotFoundError(RouteFinderError):
+    """Unable to find node."""
+
+
 class NoResultError(RouteFinderError):
     """Unable to find path."""
 
@@ -166,3 +211,11 @@ class ReadOrderError(RouteFinderError):
 
 class AlreadyReadError(RouteFinderError):
     """A part of data already read."""
+
+
+class DataCorruptionError(RouteFinderError):
+    """Data is corruption."""
+
+
+class MiscellaneousError(RouteFinderError):
+    """Miscellaneous errors."""
